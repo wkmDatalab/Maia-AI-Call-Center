@@ -50,6 +50,10 @@ flowchart LR
     WAITFD --> LOAD_FACT
 ```
 
+<p align="center">
+  <img src="image.png" alt="Parent package diagram" />
+</p>
+
 The [LOAD_FCT_CALL_TRANSCRIPT](LOAD_FCT_CALL_TRANSCRIPT.tran.yaml) transfrmation pipeline ingests all of the dimension tables (`DWH.DIM_XXXX`) and the data from the  to create a Fact table.
 
 
@@ -84,16 +88,14 @@ graph LR
     FILTER --> INSERT_FCT
 ```
 
-Finally, the individual `LOAD_DIM_XXXX` transformation pipelines are shown below for quick visual reference:
-
-<div align="center">
-  <img src="LOAD_DIM_AGENT.png" alt="Load DIM Agent pipeline" width="220" />
-  <img src="LOAD_DIM_CALL_PRIORITY.png" alt="Load DIM Call Priority pipeline" width="220" />
-  <img src="LOAD_DIM_CALL_SENTIMENT.png" alt="Load DIM Call Sentiment pipeline" width="220" />
-  <img src="LOAD_DIM_CALL_STATUS.png" alt="Load DIM Call Status pipeline" width="220" />
-  <img src="LOAD_DIM_CALL_TYPE.png" alt="Load DIM Call Type pipeline" width="220" />
-</div>
-
+lastly are the various `LOAD_DIM_XXXX` transfromation pipeline
+<p align="center">
+  <img src="LOAD_DIM_AGENT.png" alt="LOAD_DIM_AGENT" />
+  <img src="LOAD_DIM_CALL_PRIORITY.png" alt="LOAD_DIM_CALL_PRIORITY" />
+  <img src="LOAD_DIM_CALL_SENTIMENT.png" alt="LOAD_DIM_CALL_SENTIMENT" />
+  <img src="LOAD_DIM_CALL_STATUS.png" alt="LOAD_DIM_CALL_STATUS" />
+  <img src="LOAD_DIM_CALL_TYPE.png" alt="LOAD_DIM_CALL_TYPE" />
+</p>
 ```mermaid
 flowchart LR
 
