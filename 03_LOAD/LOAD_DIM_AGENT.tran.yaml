@@ -1,0 +1,83 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Load unique agent records into DIM_AGENT with incremental logic"
+    origin: "maia-019f1dff-0b22-7bff-8e9f-5eaa4f97d7b6"
+  components:
+    Input Agents:
+      type: "table-input"
+      parameters:
+        componentName: "Input Agents"
+        database: "[Environment Default]"
+        schema: "STAGE"
+        targetTable: "AUDIO_TRANSCRIPT_ANALYSIS"
+        columnNames:
+        - "AGENT_CODE"
+        - "AGENT_NAME"
+    Filter Existing Records:
+      type: "sql"
+      sources:
+      - "Input Agents"
+      parameters:
+        componentName: "Filter Existing Records"
+        query: |
+          SELECT DISTINCT "AGENT_CODE", "AGENT_NAME"
+          FROM $T{Input Agents}
+          WHERE "AGENT_CODE" NOT IN (
+            SELECT "AGENT_CODE"
+            FROM "CALL_CENTER_ANALYTICS_DW"."DWH"."DIM_AGENT"
+          )
+    Calculate Key:
+      type: "calculator"
+      sources:
+      - "Filter Existing Records"
+      parameters:
+        componentName: "Calculate Key"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            UPPER("AGENT_CODE")
+          - "AGENT_CODE"
+        - - |
+            UPPER("AGENT_NAME")
+          - "AGENT_NAME"
+    Insert DIM_AGENT:
+      type: "table-output"
+      sources:
+      - "Calculate Key"
+      parameters:
+        componentName: "Insert DIM_AGENT"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_AGENT"
+        fixDataTypeMismatches: "Yes"
+        columnMapping:
+        - - "AGENT_CODE"
+          - "AGENT_CODE"
+        - - "AGENT_NAME"
+          - "AGENT_NAME"
+        outputMode: "Append"
+design:
+  components:
+    Input Agents:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Filter Existing Records:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId:
+    Calculate Key:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId:
+    Insert DIM_AGENT:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId:

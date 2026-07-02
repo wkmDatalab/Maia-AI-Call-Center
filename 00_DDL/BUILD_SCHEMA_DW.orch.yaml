@@ -1,0 +1,308 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Drop All Tables - EXTRACT"
+        - "Drop All Tables - DWH"
+        - "Drop All Tables - STAGE"
+      parameters:
+        componentName: "Start"
+    Create DIM_AGENT:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Dimensions Complete"
+      parameters:
+        componentName: "Create DIM_AGENT"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/DWH/DIM_AGENT.sql"
+        declareSqlVariables: "Include selected"
+    Create DIM_CALL_PRIORITY:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Dimensions Complete"
+      parameters:
+        componentName: "Create DIM_CALL_PRIORITY"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/DWH/DIM_CALL_PRIORITY.sql"
+        declareSqlVariables: "Include selected"
+    Create DIM_CALL_TYPE:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Dimensions Complete"
+      parameters:
+        componentName: "Create DIM_CALL_TYPE"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/DWH/DIM_CALL_TYPE.sql"
+    Create DIM_CALL_SENTIMENT:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Dimensions Complete"
+      parameters:
+        componentName: "Create DIM_CALL_SENTIMENT"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/DWH/DIM_CALL_SENTIMENT.sql"
+        declareSqlVariables: "Include selected"
+    Create DIM_CALL_STATUS:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Dimensions Complete"
+      parameters:
+        componentName: "Create DIM_CALL_STATUS"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/DWH/DIM_CALL_STATUS.sql"
+        declareSqlVariables: "Include selected"
+    Dimensions Complete:
+      type: "and"
+      transitions:
+        unconditional:
+        - "Create FCT_CALL_TRANSCRIPT"
+      parameters:
+        componentName: "Dimensions Complete"
+    Create FCT_CALL_TRANSCRIPT:
+      type: "sql-executor"
+      parameters:
+        componentName: "Create FCT_CALL_TRANSCRIPT"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/DWH/FCT_CALL_TRANSCRIPT.sql"
+        declareSqlVariables: "Include selected"
+    Create EXTRACT.AUDIO_FILES:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "EXTRACT Complete"
+      parameters:
+        componentName: "Create EXTRACT.AUDIO_FILES"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/EXTRACT/AUDIO_FILES.sql"
+    Create STAGE.AUDIO_TRANSCRIPT:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "STAGE Complete"
+      parameters:
+        componentName: "Create STAGE.AUDIO_TRANSCRIPT"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/STAGE/AUDIO_TRANSCRIPT.sql"
+        declareSqlVariables: "Include selected"
+    STAGE Complete:
+      type: "and"
+      transitions:
+        unconditional:
+        - "Create DIM_CALL_STATUS"
+        - "Create DIM_CALL_SENTIMENT"
+        - "Create DIM_CALL_PRIORITY"
+        - "Create DIM_CALL_TYPE"
+        - "Create DIM_AGENT"
+      parameters:
+        componentName: "STAGE Complete"
+    EXTRACT Complete:
+      type: "and"
+      transitions:
+        unconditional:
+        - "Create STAGE.AUDIO_TRANSCRIPT_ANLYSIS"
+        - "Create STAGE.AUDIO_TRANSCRIPT"
+      parameters:
+        componentName: "EXTRACT Complete"
+    Create EXTRACT.LOOKUP:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "EXTRACT Complete"
+      parameters:
+        componentName: "Create EXTRACT.LOOKUP"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/EXTRACT/LOOKUP.sql"
+    Create STAGE.AUDIO_TRANSCRIPT_ANLYSIS:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "STAGE Complete"
+      parameters:
+        componentName: "Create STAGE.AUDIO_TRANSCRIPT_ANLYSIS"
+        scriptLocation: "File"
+        fileName: "04 - RESOURCES/SQL/DDL/STAGE/AUDIO_TRANSCRIPT_ANALYSIS.sql"
+        declareSqlVariables: "Include selected"
+    Drop All Tables - EXTRACT:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "All Tables Dropped"
+      parameters:
+        componentName: "Drop All Tables - EXTRACT"
+        scriptLocation: "Component"
+        sqlScript: |
+          DROP TABLE IF EXISTS EXTRACT.AUDIO_FILES;
+          DROP TABLE IF EXISTS EXTRACT.LOOKUP;
+        declareSqlVariables: "Include selected"
+    Drop All Tables - DWH:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "All Tables Dropped"
+      parameters:
+        componentName: "Drop All Tables - DWH"
+        scriptLocation: "Component"
+        sqlScript: |-
+          DROP TABLE IF EXISTS DIM_AGENT;
+          DROP TABLE IF EXISTS DIM_CALL_PRIORITY;
+          DROP TABLE IF EXISTS DIM_CALL_TYPE;
+          DROP TABLE IF EXISTS DIM_CALL_SENTIMENT;
+          DROP TABLE IF EXISTS DIM_CALL_STATUS;
+    All Tables Dropped:
+      type: "and"
+      transitions:
+        unconditional:
+        - "Create EXTRACT.AUDIO_FILES"
+        - "Create EXTRACT.LOOKUP"
+      parameters:
+        componentName: "All Tables Dropped"
+    Drop All Tables - STAGE:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "All Tables Dropped"
+      parameters:
+        componentName: "Drop All Tables - STAGE"
+        scriptLocation: "Component"
+        sqlScript: |
+          DROP TABLE IF EXISTS STAGE.AUDIO_TRANSCRIPT;
+          DROP TABLE IF EXISTS STAGE.AUDIO_TRANSCRIPT_ANALYSIS;
+        declareSqlVariables: "Include selected"
+design:
+  components:
+    Start:
+      position:
+        x: -1060
+        "y": 200
+      tempMetlId: 1
+    Create DIM_AGENT:
+      position:
+        x: 160
+        "y": -10
+      tempMetlId: 2
+    Create DIM_CALL_PRIORITY:
+      position:
+        x: 160
+        "y": 90
+      tempMetlId: 3
+    Create DIM_CALL_TYPE:
+      position:
+        x: 160
+        "y": 200
+      tempMetlId: 4
+    Create DIM_CALL_SENTIMENT:
+      position:
+        x: 160
+        "y": 300
+      tempMetlId: 5
+    Create DIM_CALL_STATUS:
+      position:
+        x: 160
+        "y": 410
+      tempMetlId: 6
+    Dimensions Complete:
+      position:
+        x: 390
+        "y": 200
+      tempMetlId: 7
+    Create FCT_CALL_TRANSCRIPT:
+      position:
+        x: 540
+        "y": 200
+      tempMetlId: 8
+    Create EXTRACT.AUDIO_FILES:
+      position:
+        x: -560
+        "y": 110
+      tempMetlId: 9
+    Create STAGE.AUDIO_TRANSCRIPT:
+      position:
+        x: -230
+        "y": 110
+      tempMetlId: 10
+    STAGE Complete:
+      position:
+        x: -90
+        "y": 200
+      tempMetlId: 11
+    EXTRACT Complete:
+      position:
+        x: -400
+        "y": 200
+      tempMetlId: 12
+    Create EXTRACT.LOOKUP:
+      position:
+        x: -560
+        "y": 290
+      tempMetlId: 13
+    Create STAGE.AUDIO_TRANSCRIPT_ANLYSIS:
+      position:
+        x: -230
+        "y": 290
+      tempMetlId: 14
+    Drop All Tables - EXTRACT:
+      position:
+        x: -890
+        "y": 70
+      tempMetlId: 15
+    Drop All Tables - DWH:
+      position:
+        x: -890
+        "y": 330
+      tempMetlId: 16
+    All Tables Dropped:
+      position:
+        x: -740
+        "y": 200
+      tempMetlId: 17
+    Drop All Tables - STAGE:
+      position:
+        x: -890
+        "y": 200
+      tempMetlId: 18
+  notes:
+    "1":
+      position:
+        x: 30
+        "y": -80
+      size:
+        height: 608
+        width: 630
+      theme: "red"
+      content: "DWH"
+    "2":
+      position:
+        x: -300
+        "y": -80
+      size:
+        height: 608
+        width: 300
+      theme: "yellow"
+      content: "STAGE"
+    "3":
+      position:
+        x: -660
+        "y": -80
+      size:
+        height: 608
+        width: 340
+      theme: "green"
+      content: "EXTRACT"
+    "4":
+      position:
+        x: -1010
+        "y": -80
+      size:
+        height: 608
+        width: 330
+      theme: "white"
+      content: "REDEPLOY - DELETE EXISTING OBJECTS"

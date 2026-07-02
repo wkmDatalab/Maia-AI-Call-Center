@@ -1,0 +1,111 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Load new CALL_SENTIMENT records from LOOKUP into DIM_CALL_SENTIMENT\
+      \ incrementally"
+    origin: "maia-019f21e2-a4e4-7382-a6ef-78592671ed4f"
+  components:
+    Input Lookup:
+      type: "table-input"
+      parameters:
+        componentName: "Input Lookup"
+        database: "[Environment Default]"
+        schema: "EXTRACT"
+        targetTable: "LOOKUP"
+        columnNames:
+        - "LOOKUP_FILTER"
+        - "LOOKUP_CODE"
+        - "LOOKUP_SHORT_NAME"
+        - "LOOKUP_DESC"
+        - "LOOKUP_SORT_ORDER"
+    Filter Call Sentiment:
+      type: "filter"
+      sources:
+      - "Input Lookup"
+      parameters:
+        componentName: "Filter Call Sentiment"
+        filterConditions:
+        - - "LOOKUP_FILTER"
+          - "Is"
+          - "Equal to"
+          - "CALL_SENTIMENT"
+        combineCondition: "And"
+    Calculate Uppercase:
+      type: "calculator"
+      sources:
+      - "Filter Call Sentiment"
+      parameters:
+        componentName: "Calculate Uppercase"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            UPPER("LOOKUP_CODE")
+          - "CALL_SENTIMENT_CODE"
+        - - |
+            UPPER("LOOKUP_SHORT_NAME")
+          - "CALL_SENTIMENT"
+        - - |
+            UPPER("LOOKUP_DESC")
+          - "CALL_SENTIMENT_DESC"
+    Filter New Records:
+      type: "sql"
+      sources:
+      - "Calculate Uppercase"
+      parameters:
+        componentName: "Filter New Records"
+        query: |
+          SELECT "CALL_SENTIMENT_CODE", "CALL_SENTIMENT", "CALL_SENTIMENT_DESC", "LOOKUP_SORT_ORDER" AS "CALL_SENTIMENT_SORT_ORDER"
+          FROM $T{Calculate Uppercase}
+          WHERE "CALL_SENTIMENT_CODE" NOT IN (
+            SELECT "CALL_SENTIMENT_CODE"
+            FROM "CALL_CENTER_ANALYTICS_DW"."DWH"."DIM_CALL_SENTIMENT"
+          )
+    Insert DIM_CALL_SENTIMENT:
+      type: "table-output"
+      sources:
+      - "Filter New Records"
+      parameters:
+        componentName: "Insert DIM_CALL_SENTIMENT"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_CALL_SENTIMENT"
+        fixDataTypeMismatches: "Yes"
+        columnMapping:
+        - - "CALL_SENTIMENT_CODE"
+          - "CALL_SENTIMENT_CODE"
+        - - "CALL_SENTIMENT"
+          - "CALL_SENTIMENT"
+        - - "CALL_SENTIMENT_DESC"
+          - "CALL_SENTIMENT_DESC"
+        - - "CALL_SENTIMENT_SORT_ORDER"
+          - "CALL_SENTIMENT_SORT_ORDER"
+        outputMode: "Append"
+design:
+  components:
+    Input Lookup:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Filter Call Sentiment:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId:
+    Calculate Uppercase:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId:
+    Filter New Records:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId:
+    Insert DIM_CALL_SENTIMENT:
+      position:
+        x: 640
+        "y": 0
+      tempMetlId:

@@ -1,0 +1,108 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Incremental load of audio transcription - transcribes audio files\
+      \ using AI_TRANSCRIBE and loads new records into STAGE.AUDIO_TRANSCRIPT"
+    origin: "maia-019f1def-6983-79ba-9526-e87f66c631ab"
+  components:
+    Source Audio Files:
+      type: "table-input"
+      parameters:
+        componentName: "Source Audio Files"
+        database: "[Environment Default]"
+        schema: "EXTRACT"
+        targetTable: "AUDIO_FILES"
+        columnNames:
+        - "CALL_TRANSCRIPT_ID"
+        - "FILE_PATH"
+        - "AUDIO_FILE_URL"
+        - "FILE_SIZE"
+        - "LAST_MODIFIED"
+        - "AUDIO_FILE"
+    Filter New Records:
+      type: "filter"
+      sources:
+      - "Source Audio Files"
+      parameters:
+        componentName: "Filter New Records"
+        mode: "Advanced"
+        filterClause: "\"CALL_TRANSCRIPT_ID\" NOT IN (SELECT \"CALL_TRANSCRIPT_ID\"\
+          \ FROM \"CALL_CENTER_ANALYTICS_DW\".\"STAGE\".\"AUDIO_TRANSCRIPT\")"
+    Transcribe Audio:
+      type: "calculator"
+      sources:
+      - "Filter New Records"
+      parameters:
+        componentName: "Transcribe Audio"
+        includeInputColumns: "Yes"
+        calculations:
+        - - "AI_TRANSCRIBE(\"AUDIO_FILE\")"
+          - "TRANSCRIPT_JSON"
+        - - "\"TRANSCRIPT_JSON\":audio_duration::NUMBER"
+          - "DURATION"
+        - - "\"TRANSCRIPT_JSON\":text::VARCHAR"
+          - "TRANSCRIPT"
+        - - "CURRENT_TIMESTAMP()"
+          - "TRANSCRIPTION_DATE"
+        - - "LENGTH(\"TRANSCRIPT_JSON\":text::VARCHAR)"
+          - "CHARACTER_COUNT"
+        - - "ARRAY_SIZE(SPLIT(\"TRANSCRIPT_JSON\":text::VARCHAR, ' '))"
+          - "WORD_COUNT"
+    Output to Stage:
+      type: "table-output"
+      sources:
+      - "Transcribe Audio"
+      parameters:
+        componentName: "Output to Stage"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "STAGE"
+        targetTable: "AUDIO_TRANSCRIPT"
+        fixDataTypeMismatches: "Yes"
+        outputMode: "Append"
+        columnMapping:
+        - - "CALL_TRANSCRIPT_ID"
+          - "CALL_TRANSCRIPT_ID"
+        - - "FILE_PATH"
+          - "FILE_PATH"
+        - - "AUDIO_FILE_URL"
+          - "AUDIO_FILE_URL"
+        - - "FILE_SIZE"
+          - "FILE_SIZE"
+        - - "LAST_MODIFIED"
+          - "LAST_MODIFIED"
+        - - "TRANSCRIPT_JSON"
+          - "TRANSCRIPT_JSON"
+        - - "DURATION"
+          - "DURATION"
+        - - "TRANSCRIPT"
+          - "TRANSCRIPT"
+        - - "TRANSCRIPTION_DATE"
+          - "TRANSCRIPTION_DATE"
+        - - "CHARACTER_COUNT"
+          - "CHARACTER_COUNT"
+        - - "WORD_COUNT"
+          - "WORD_COUNT"
+design:
+  components:
+    Source Audio Files:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Filter New Records:
+      position:
+        x: 200
+        "y": 0
+      tempMetlId:
+    Transcribe Audio:
+      position:
+        x: 400
+        "y": 0
+      tempMetlId:
+    Output to Stage:
+      position:
+        x: 600
+        "y": 0
+      tempMetlId:

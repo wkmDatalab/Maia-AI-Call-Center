@@ -1,0 +1,73 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    origin: "maia-019f1dd3-1ac9-782a-8363-c1033016c155"
+    description: "Incremental extract of LOOKUP.json from Snowflake stage into EXTRACT.LOOKUP"
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+          - "Load Lookup Data"
+      parameters:
+        componentName: "Start"
+    Load Lookup Data:
+      type: "sql-executor"
+      parameters:
+        componentName: "Load Lookup Data"
+        scriptLocation: "Component"
+        sqlScript: |
+          INSERT INTO "CALL_CENTER_ANALYTICS_DW"."EXTRACT"."LOOKUP" (
+              LOOKUP_FILTER,
+              LOOKUP_ID,
+              LOOKUP_CODE,
+              LOOKUP_LOWER_BOUND,
+              LOOKUP_UPPER_BOUND,
+              LOOKUP_SHORT_NAME,
+              LOOKUP_LONG_NAME,
+              LOOKUP_DESC,
+              LOOKUP_SORT_ORDER
+          )
+          WITH stage_data AS (
+              SELECT 
+                  $1:LOOKUP_FILTER::VARCHAR AS LOOKUP_FILTER,
+                  $1:LOOKUP_ID::NUMBER AS LOOKUP_ID,
+                  $1:LOOKUP_CODE::VARCHAR AS LOOKUP_CODE,
+                  $1:LOOKUP_LOWER_BOUND::FLOAT AS LOOKUP_LOWER_BOUND,
+                  $1:LOOKUP_UPPER_BOUND::FLOAT AS LOOKUP_UPPER_BOUND,
+                  $1:LOOKUP_SHORT_NAME::VARCHAR AS LOOKUP_SHORT_NAME,
+                  $1:LOOKUP_LONG_NAME::VARCHAR AS LOOKUP_LONG_NAME,
+                  $1:LOOKUP_DESC::VARCHAR AS LOOKUP_DESC,
+                  $1:LOOKUP_SORT_ORDER::NUMBER AS LOOKUP_SORT_ORDER
+              FROM 
+                  @"CALL_CENTER_ANALYTICS_DW"."EXTRACT"."INT_STAGE_DOC"/LOOKUP.json
+                  (FILE_FORMAT => '"CALL_CENTER_ANALYTICS_DW"."EXTRACT"."JSON_FORMAT"')
+          )
+          SELECT 
+              s.LOOKUP_FILTER,
+              s.LOOKUP_ID,
+              s.LOOKUP_CODE,
+              s.LOOKUP_LOWER_BOUND,
+              s.LOOKUP_UPPER_BOUND,
+              s.LOOKUP_SHORT_NAME,
+              s.LOOKUP_LONG_NAME,
+              s.LOOKUP_DESC,
+              s.LOOKUP_SORT_ORDER
+          FROM stage_data s
+          WHERE NOT EXISTS (
+              SELECT 1 
+              FROM "CALL_CENTER_ANALYTICS_DW"."EXTRACT"."LOOKUP" t
+              WHERE t.LOOKUP_FILTER = s.LOOKUP_FILTER
+                AND t.LOOKUP_ID = s.LOOKUP_ID
+          );
+design:
+  components:
+    Start:
+      position:
+        x: 0
+        y: 0
+    Load Lookup Data:
+      position:
+        x: 160
+        y: 0

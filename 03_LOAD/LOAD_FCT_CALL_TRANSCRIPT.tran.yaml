@@ -1,0 +1,244 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Load FCT_CALL_TRANSCRIPT incrementally with dimension key lookups"
+    origin: "maia-019f21e2-a4e4-7382-a6ef-78592671ed4f"
+  components:
+    Source Transcripts:
+      type: "table-input"
+      parameters:
+        componentName: "Source Transcripts"
+        database: "[Environment Default]"
+        schema: "STAGE"
+        targetTable: "AUDIO_TRANSCRIPT_ANALYSIS"
+        columnNames:
+        - "CALL_TRANSCRIPT_ID"
+        - "AGENT_CODE"
+        - "CALL_TYPE_CODE"
+        - "CALL_PRIORITY_CODE"
+        - "CALL_STATUS_CODE"
+        - "CALL_SENTIMENT_CODE"
+        - "CALL_SENTIMENT_SCORE"
+        - "CALL_DURATION"
+        - "CALL_WORD_COUNT"
+        - "CALL_CHARACTER_COUNT"
+        - "CALL_TRANSCRIPT"
+        - "CALL_SUMMARY"
+    Lookup DIM_AGENT:
+      type: "table-input"
+      parameters:
+        componentName: "Lookup DIM_AGENT"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_AGENT"
+        columnNames:
+        - "AGENT_CODE"
+        - "AGENT_KEY"
+    Lookup DIM_CALL_TYPE:
+      type: "table-input"
+      parameters:
+        componentName: "Lookup DIM_CALL_TYPE"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_CALL_TYPE"
+        columnNames:
+        - "CALL_TYPE_CODE"
+        - "CALL_TYPE_KEY"
+    Lookup DIM_CALL_PRIORITY:
+      type: "table-input"
+      parameters:
+        componentName: "Lookup DIM_CALL_PRIORITY"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_CALL_PRIORITY"
+        columnNames:
+        - "CALL_PRIORITY_CODE"
+        - "CALL_PRIORITY_KEY"
+    Lookup DIM_CALL_STATUS:
+      type: "table-input"
+      parameters:
+        componentName: "Lookup DIM_CALL_STATUS"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_CALL_STATUS"
+        columnNames:
+        - "CALL_STATUS_CODE"
+        - "CALL_STATUS_KEY"
+    Lookup DIM_CALL_SENTIMENT:
+      type: "table-input"
+      parameters:
+        componentName: "Lookup DIM_CALL_SENTIMENT"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_CALL_SENTIMENT"
+        columnNames:
+        - "CALL_SENTIMENT_CODE"
+        - "CALL_SENTIMENT_KEY"
+    Join Dimensions:
+      type: "join"
+      sources:
+      - "Source Transcripts"
+      - "Lookup DIM_AGENT"
+      - "Lookup DIM_CALL_TYPE"
+      - "Lookup DIM_CALL_PRIORITY"
+      - "Lookup DIM_CALL_STATUS"
+      - "Lookup DIM_CALL_SENTIMENT"
+      parameters:
+        componentName: "Join Dimensions"
+        mainTable: "Source Transcripts"
+        mainTableAlias: "src"
+        joins:
+        - - "Lookup DIM_AGENT"
+          - "agent"
+          - "Inner"
+        - - "Lookup DIM_CALL_TYPE"
+          - "ctype"
+          - "Inner"
+        - - "Lookup DIM_CALL_PRIORITY"
+          - "cpri"
+          - "Inner"
+        - - "Lookup DIM_CALL_STATUS"
+          - "cstat"
+          - "Inner"
+        - - "Lookup DIM_CALL_SENTIMENT"
+          - "csent"
+          - "Inner"
+        joinExpressions:
+        - - |
+            "src"."AGENT_CODE" = "agent"."AGENT_CODE"
+          - "src_Inner_agent"
+        - - |
+            "src"."CALL_TYPE_CODE" = "ctype"."CALL_TYPE_CODE"
+          - "src_Inner_ctype"
+        - - |
+            "src"."CALL_PRIORITY_CODE" = "cpri"."CALL_PRIORITY_CODE"
+          - "src_Inner_cpri"
+        - - |
+            "src"."CALL_STATUS_CODE" = "cstat"."CALL_STATUS_CODE"
+          - "src_Inner_cstat"
+        - - |
+            "src"."CALL_SENTIMENT_CODE" = "csent"."CALL_SENTIMENT_CODE"
+          - "src_Inner_csent"
+        columnMappings:
+        - - "src.CALL_TRANSCRIPT_ID"
+          - "CALL_TRANSCRIPT_ID"
+        - - "agent.AGENT_KEY"
+          - "AGENT_KEY"
+        - - "ctype.CALL_TYPE_KEY"
+          - "CALL_TYPE_KEY"
+        - - "cpri.CALL_PRIORITY_KEY"
+          - "CALL_PRIORITY_KEY"
+        - - "cstat.CALL_STATUS_KEY"
+          - "CALL_STATUS_KEY"
+        - - "csent.CALL_SENTIMENT_KEY"
+          - "CALL_SENTIMENT_KEY"
+        - - "src.CALL_SENTIMENT_SCORE"
+          - "CALL_SENTIMENT_SCORE"
+        - - "src.CALL_DURATION"
+          - "CALL_DURATION"
+        - - "src.CALL_WORD_COUNT"
+          - "CALL_WORD_COUNT"
+        - - "src.CALL_CHARACTER_COUNT"
+          - "CALL_CHARACTER_COUNT"
+        - - "src.CALL_TRANSCRIPT"
+          - "CALL_TRANSCRIPT"
+        - - "src.CALL_SUMMARY"
+          - "CALL_SUMMARY"
+    Filter New Records:
+      type: "sql"
+      sources:
+      - "Join Dimensions"
+      parameters:
+        componentName: "Filter New Records"
+        query: |
+          SELECT *
+          FROM $T{Join Dimensions}
+          WHERE "CALL_TRANSCRIPT_ID" NOT IN (
+            SELECT "CALL_TRANSCRIPT_ID"
+            FROM "CALL_CENTER_ANALYTICS_DW"."DWH"."FCT_CALL_TRANSCRIPT"
+          )
+    Insert FCT_CALL_TRANSCRIPT:
+      type: "table-output"
+      sources:
+      - "Filter New Records"
+      parameters:
+        componentName: "Insert FCT_CALL_TRANSCRIPT"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "FCT_CALL_TRANSCRIPT"
+        fixDataTypeMismatches: "Yes"
+        columnMapping:
+        - - "CALL_TRANSCRIPT_ID"
+          - "CALL_TRANSCRIPT_ID"
+        - - "AGENT_KEY"
+          - "AGENT_KEY"
+        - - "CALL_TYPE_KEY"
+          - "CALL_TYPE_KEY"
+        - - "CALL_PRIORITY_KEY"
+          - "CALL_PRIORITY_KEY"
+        - - "CALL_STATUS_KEY"
+          - "CALL_STATUS_KEY"
+        - - "CALL_SENTIMENT_KEY"
+          - "CALL_SENTIMENT_KEY"
+        - - "CALL_SENTIMENT_SCORE"
+          - "CALL_SENTIMENT_SCORE"
+        - - "CALL_DURATION"
+          - "CALL_DURATION"
+        - - "CALL_WORD_COUNT"
+          - "CALL_WORD_COUNT"
+        - - "CALL_CHARACTER_COUNT"
+          - "CALL_CHARACTER_COUNT"
+        - - "CALL_TRANSCRIPT"
+          - "CALL_TRANSCRIPT"
+        - - "CALL_SUMMARY"
+          - "CALL_SUMMARY"
+        outputMode: "Append"
+design:
+  components:
+    Source Transcripts:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Lookup DIM_AGENT:
+      position:
+        x: 0
+        "y": 80
+      tempMetlId:
+    Lookup DIM_CALL_TYPE:
+      position:
+        x: 0
+        "y": 160
+      tempMetlId:
+    Lookup DIM_CALL_PRIORITY:
+      position:
+        x: 0
+        "y": 240
+      tempMetlId:
+    Lookup DIM_CALL_STATUS:
+      position:
+        x: 0
+        "y": 320
+      tempMetlId:
+    Lookup DIM_CALL_SENTIMENT:
+      position:
+        x: 0
+        "y": 400
+      tempMetlId:
+    Join Dimensions:
+      position:
+        x: 240
+        "y": 200
+      tempMetlId:
+    Filter New Records:
+      position:
+        x: 400
+        "y": 200
+      tempMetlId:
+    Insert FCT_CALL_TRANSCRIPT:
+      position:
+        x: 560
+        "y": 200
+      tempMetlId:

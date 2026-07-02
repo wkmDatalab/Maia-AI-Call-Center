@@ -1,0 +1,251 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    origin: "maia-019f1dff-0b22-7bff-8e9f-5eaa4f97d7b6"
+  components:
+    Input Audio Transcript:
+      type: "table-input"
+      parameters:
+        componentName: "Input Audio Transcript"
+        database: "[Environment Default]"
+        schema: "STAGE"
+        targetTable: "AUDIO_TRANSCRIPT"
+        columnNames:
+        - "CALL_TRANSCRIPT_ID"
+        - "TRANSCRIPTION_DATE"
+        - "AUDIO_FILE_URL"
+        - "TRANSCRIPT"
+        - "DURATION"
+        - "CHARACTER_COUNT"
+        - "WORD_COUNT"
+    Filter Existing Records:
+      type: "sql"
+      sources:
+      - "Input Audio Transcript"
+      parameters:
+        componentName: "Filter Existing Records"
+        query: |
+          SELECT * FROM $T{Input Audio Transcript} src
+          WHERE src."CALL_TRANSCRIPT_ID" NOT IN (
+            SELECT "CALL_TRANSCRIPT_ID"
+            FROM "CALL_CENTER_ANALYTICS_DW"."STAGE"."AUDIO_TRANSCRIPT_ANALYSIS"
+          )
+    Extract Answer:
+      type: "cortex-extract-answer"
+      sources:
+      - "Filter Existing Records"
+      parameters:
+        componentName: "Extract Answer"
+        columns:
+        - - "TRANSCRIPT"
+          - "What is the name of the caller centre agent?"
+          - "AGENT_NAME_AI"
+        includeInputColumns: "Yes"
+    Summarise:
+      type: "cortex-summarize"
+      sources:
+      - "Extract Answer"
+      parameters:
+        componentName: "Summarise"
+        columns:
+        - "TRANSCRIPT"
+        includeInputColumns: "Yes"
+    Sentiment:
+      type: "cortex-sentiment"
+      sources:
+      - "Summarise"
+      parameters:
+        componentName: "Sentiment"
+        columns:
+        - "TRANSCRIPT"
+        includeInputColumns: "Yes"
+    Complete:
+      type: "cortex-multi-prompt"
+      sources:
+      - "Sentiment"
+      parameters:
+        componentName: "Complete"
+        model: "mistral-large2"
+        inputs:
+        - - "TRANSCRIPT"
+          - "Call Centre Transcript"
+        outputs:
+        - - "CALL_TYPE_CODE"
+          - |
+            Categorise the call into one of the following?
+
+            BILLING:Billing enquiry. Questions about charges, payments, or invoices.
+            TECHNICAL_SUPPORT: Technical support. Help resolving technical issues or access problems.
+            COMPLAINT: Complaint. Customer expresses dissatisfaction or reports a problem.
+            INFORMATION: Information request. Caller asks for information or clarification.
+            SALES: Sales/upgrade. Interest in buying or upgrading a product or service.
+            CANCELLATION: Cancellation. Caller wants to cancel a subscription or service.
+            OTHER: Other. Does not fit known categories; requires manual review or enrichment.
+
+            You must return ONE of the codes: BILLING, TECHNICAL_SUPPORT, COMPLAINT, INFORMATION, SALES, CANCELLATION, OTHER
+        - - "CALL_STATUS_CODE"
+          - |
+            Has the call be resolved?
+
+            YES: Issue resolved. Problem fully addressed during the interaction.
+            PARTIAL: Partially resolved. Follow-ups or actions still required.
+            NO: Not resolved. Issue unresolved; escalation likely.
+
+            You must return ONE of the codes: YES, PARTIAL, NO
+        - - "CALL_PRIORITY_CODE"
+          - |
+            What is the priority of this call?
+
+            LOW: Items that can be solved within 3 days.
+            MEDIUM: Target resolution within 24-72 hours.
+            HIGH: Requires action within 24 hours.
+            CRITICAL: Immediate action required; severe impact likely.
+
+            You must return ONE of the codes: LOW, MEDIUM, HIGH, CRITICAL
+        - - "CALL_SENTIMENT_SCORE"
+          - "Calculate a Call Sentiment Score between -1 and 1?"
+        includeInputColumns: "Yes"
+        failureMode: "Continue on Error"
+        guardrails: "No"
+    Data Extraction:
+      type: "calculator"
+      sources:
+      - "Complete"
+      parameters:
+        componentName: "Data Extraction"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            UPPER("AGENT_NAME_AI"[0]['answer']::VARCHAR)
+          - "AGENT_NAME"
+        - - |
+            UPPER("sentiment_TRANSCRIPT"[0]['sentiment']::VARCHAR)
+          - "CALL_SENTIMENT_CODE"
+        - - |
+            UPPER(REGEXP_REPLACE("AGENT_NAME", '[^A-Z]', ''))
+          - "AGENT_CODE"
+    Rename:
+      type: "rename"
+      sources:
+      - "Data Extraction"
+      parameters:
+        componentName: "Rename"
+        columnMapping:
+        - - "CALL_TRANSCRIPT_ID"
+          - "CALL_TRANSCRIPT_ID"
+        - - "summary_TRANSCRIPT"
+          - "CALL_SUMMARY"
+        - - "TRANSCRIPT"
+          - "CALL_TRANSCRIPT"
+        - - "TRANSCRIPTION_DATE"
+          - "CALL_DATE"
+        - - "AGENT_CODE"
+          - "AGENT_CODE"
+        - - "AGENT_NAME"
+          - "AGENT_NAME"
+        - - "CALL_TYPE_CODE"
+          - "CALL_TYPE_CODE"
+        - - "CALL_SENTIMENT_CODE"
+          - "CALL_SENTIMENT_CODE"
+        - - "CALL_PRIORITY_CODE"
+          - "CALL_PRIORITY_CODE"
+        - - "CALL_STATUS_CODE"
+          - "CALL_STATUS_CODE"
+        - - "DURATION"
+          - "CALL_DURATION"
+        - - "CHARACTER_COUNT"
+          - "CALL_CHARACTER_COUNT"
+        - - "WORD_COUNT"
+          - "CALL_WORD_COUNT"
+        - - "CALL_SENTIMENT_SCORE"
+          - "CALL_SENTIMENT_SCORE"
+        includeInputColumns: "No"
+    Insert Audio Transcript Analysis:
+      type: "table-output"
+      sources:
+      - "Rename"
+      parameters:
+        componentName: "Insert Audio Transcript Analysis"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "STAGE"
+        targetTable: "AUDIO_TRANSCRIPT_ANALYSIS"
+        fixDataTypeMismatches: "Yes"
+        columnMapping:
+        - - "CALL_TRANSCRIPT_ID"
+          - "CALL_TRANSCRIPT_ID"
+        - - "CALL_SUMMARY"
+          - "CALL_SUMMARY"
+        - - "CALL_TRANSCRIPT"
+          - "CALL_TRANSCRIPT"
+        - - "CALL_DATE"
+          - "CALL_DATE"
+        - - "AGENT_CODE"
+          - "AGENT_CODE"
+        - - "AGENT_NAME"
+          - "AGENT_NAME"
+        - - "CALL_TYPE_CODE"
+          - "CALL_TYPE_CODE"
+        - - "CALL_SENTIMENT_CODE"
+          - "CALL_SENTIMENT_CODE"
+        - - "CALL_PRIORITY_CODE"
+          - "CALL_PRIORITY_CODE"
+        - - "CALL_STATUS_CODE"
+          - "CALL_STATUS_CODE"
+        - - "CALL_DURATION"
+          - "CALL_DURATION"
+        - - "CALL_CHARACTER_COUNT"
+          - "CALL_CHARACTER_COUNT"
+        - - "CALL_WORD_COUNT"
+          - "CALL_WORD_COUNT"
+        - - "CALL_SENTIMENT_SCORE"
+          - "CALL_SENTIMENT_SCORE"
+        outputMode: "Append"
+design:
+  components:
+    Input Audio Transcript:
+      position:
+        x: -20
+        "y": 0
+      tempMetlId:
+    Filter Existing Records:
+      position:
+        x: 130
+        "y": -90
+      tempMetlId:
+    Extract Answer:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId:
+    Summarise:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId:
+    Sentiment:
+      position:
+        x: 640
+        "y": 0
+      tempMetlId:
+    Complete:
+      position:
+        x: 800
+        "y": 0
+      tempMetlId:
+    Data Extraction:
+      position:
+        x: 960
+        "y": -90
+      tempMetlId:
+    Rename:
+      position:
+        x: 1040
+        "y": -90
+      tempMetlId:
+    Insert Audio Transcript Analysis:
+      position:
+        x: 1280
+        "y": 0
+      tempMetlId:

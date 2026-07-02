@@ -1,0 +1,110 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Load new CALL_TYPE records from LOOKUP into DIM_CALL_TYPE incrementally"
+    origin: "maia-019f21e2-a4e4-7382-a6ef-78592671ed4f"
+  components:
+    Input Lookup:
+      type: "table-input"
+      parameters:
+        componentName: "Input Lookup"
+        database: "[Environment Default]"
+        schema: "EXTRACT"
+        targetTable: "LOOKUP"
+        columnNames:
+        - "LOOKUP_FILTER"
+        - "LOOKUP_CODE"
+        - "LOOKUP_SHORT_NAME"
+        - "LOOKUP_DESC"
+        - "LOOKUP_SORT_ORDER"
+    Filter Call Type:
+      type: "filter"
+      sources:
+      - "Input Lookup"
+      parameters:
+        componentName: "Filter Call Type"
+        filterConditions:
+        - - "LOOKUP_FILTER"
+          - "Is"
+          - "Equal to"
+          - "CALL_TYPE"
+        combineCondition: "And"
+    Calculate Uppercase:
+      type: "calculator"
+      sources:
+      - "Filter Call Type"
+      parameters:
+        componentName: "Calculate Uppercase"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            UPPER("LOOKUP_CODE")
+          - "CALL_TYPE_CODE"
+        - - |
+            UPPER("LOOKUP_SHORT_NAME")
+          - "CALL_TYPE"
+        - - |
+            UPPER("LOOKUP_DESC")
+          - "CALL_TYPE_DESC"
+    Filter New Records:
+      type: "sql"
+      sources:
+      - "Calculate Uppercase"
+      parameters:
+        componentName: "Filter New Records"
+        query: |
+          SELECT "CALL_TYPE_CODE", "CALL_TYPE", "CALL_TYPE_DESC", "LOOKUP_SORT_ORDER" AS "CALL_TYPE_SORT_ORDER"
+          FROM $T{Calculate Uppercase}
+          WHERE "CALL_TYPE_CODE" NOT IN (
+            SELECT "CALL_TYPE_CODE"
+            FROM "CALL_CENTER_ANALYTICS_DW"."DWH"."DIM_CALL_TYPE"
+          )
+    Insert DIM_CALL_TYPE:
+      type: "table-output"
+      sources:
+      - "Filter New Records"
+      parameters:
+        componentName: "Insert DIM_CALL_TYPE"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable: "DIM_CALL_TYPE"
+        fixDataTypeMismatches: "Yes"
+        columnMapping:
+        - - "CALL_TYPE_CODE"
+          - "CALL_TYPE_CODE"
+        - - "CALL_TYPE"
+          - "CALL_TYPE"
+        - - "CALL_TYPE_DESC"
+          - "CALL_TYPE_DESC"
+        - - "CALL_TYPE_SORT_ORDER"
+          - "CALL_TYPE_SORT_ORDER"
+        outputMode: "Append"
+design:
+  components:
+    Input Lookup:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Filter Call Type:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId:
+    Calculate Uppercase:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId:
+    Filter New Records:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId:
+    Insert DIM_CALL_TYPE:
+      position:
+        x: 640
+        "y": 0
+      tempMetlId:

@@ -1,0 +1,189 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Parent orchestration job that truncates and loads all DWH dimension\
+      \ and fact tables"
+    origin: "maia-019f21fd-fd78-70e4-a944-e0fa350419d2"
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Truncate Dimensions"
+        - "Truncate Facts"
+      parameters:
+        componentName: "Start"
+    Truncate Dimensions:
+      type: "truncate-table"
+      transitions:
+        success:
+        - "Load DIM Agent"
+        - "Load DIM Call Type"
+        - "Load DIM Call Status"
+        - "Load DIM Call Sentiment"
+        - "Load DIM Call Priority"
+      parameters:
+        componentName: "Truncate Dimensions"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable:
+        - "DIM_AGENT"
+        - "DIM_CALL_PRIORITY"
+        - "DIM_CALL_SENTIMENT"
+        - "DIM_CALL_STATUS"
+        - "DIM_CALL_TYPE"
+    Truncate Facts:
+      type: "truncate-table"
+      transitions:
+        success:
+        - "Wait For Dimensions"
+      parameters:
+        componentName: "Truncate Facts"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "DWH"
+        targetTable:
+        - "FCT_CALL_TRANSCRIPT"
+    Load DIM Agent:
+      type: "run-transformation"
+      transitions:
+        success:
+        - "Wait For Dimensions"
+      parameters:
+        componentName: "Load DIM Agent"
+        transformationJob: "03 - LOAD/LOAD_DIM_AGENT"
+    Load DIM Call Type:
+      type: "run-transformation"
+      transitions:
+        success:
+        - "Wait For Dimensions"
+      parameters:
+        componentName: "Load DIM Call Type"
+        transformationJob: "03 - LOAD/LOAD_DIM_CALL_TYPE"
+    Load DIM Call Status:
+      type: "run-transformation"
+      transitions:
+        success:
+        - "Wait For Dimensions"
+      parameters:
+        componentName: "Load DIM Call Status"
+        transformationJob: "03 - LOAD/LOAD_DIM_CALL_STATUS"
+    Load DIM Call Sentiment:
+      type: "run-transformation"
+      transitions:
+        success:
+        - "Wait For Dimensions"
+      parameters:
+        componentName: "Load DIM Call Sentiment"
+        transformationJob: "03 - LOAD/LOAD_DIM_CALL_SENTIMENT"
+    Load DIM Call Priority:
+      type: "run-transformation"
+      transitions:
+        success:
+        - "Wait For Dimensions"
+      parameters:
+        componentName: "Load DIM Call Priority"
+        transformationJob: "03 - LOAD/LOAD_DIM_CALL_PRIORITY"
+    Wait For Dimensions:
+      type: "and"
+      transitions:
+        unconditional:
+        - "Load FCT Call Transcript"
+      parameters:
+        componentName: "Wait For Dimensions"
+    Load FCT Call Transcript:
+      type: "run-transformation"
+      parameters:
+        componentName: "Load FCT Call Transcript"
+        transformationJob: "03 - LOAD/LOAD_FCT_CALL_TRANSCRIPT"
+design:
+  components:
+    Start:
+      position:
+        x: 100
+        "y": 200
+      tempMetlId:
+    Truncate Dimensions:
+      position:
+        x: 230
+        "y": 200
+      tempMetlId:
+    Truncate Facts:
+      position:
+        x: 230
+        "y": 300
+      tempMetlId:
+    Load DIM Agent:
+      position:
+        x: 380
+        "y": 20
+      tempMetlId:
+    Load DIM Call Type:
+      position:
+        x: 380
+        "y": 110
+      tempMetlId:
+    Load DIM Call Status:
+      position:
+        x: 380
+        "y": 200
+      tempMetlId:
+    Load DIM Call Sentiment:
+      position:
+        x: 380
+        "y": 290
+      tempMetlId:
+    Load DIM Call Priority:
+      position:
+        x: 380
+        "y": 380
+      tempMetlId:
+    Wait For Dimensions:
+      position:
+        x: 540
+        "y": 200
+      tempMetlId:
+    Load FCT Call Transcript:
+      position:
+        x: 670
+        "y": 200
+      tempMetlId:
+  notes:
+    "1":
+      position:
+        x: 160
+        "y": -60
+      size:
+        height: 520
+        width: 150
+      theme: "white"
+      content: "TRUNCATE TABLES"
+    "2":
+      position:
+        x: 330
+        "y": -60
+      size:
+        height: 520
+        width: 150
+      theme: "green"
+      content: "LOAD DIMENSIONS"
+    "3":
+      position:
+        x: 490
+        "y": -60
+      size:
+        height: 520
+        width: 150
+      theme: "yellow"
+      content: "WAIT"
+    "4":
+      position:
+        x: 650
+        "y": -60
+      size:
+        height: 520
+        width: 150
+      theme: "red"
+      content: "LOAD FACTS"

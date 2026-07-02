@@ -1,0 +1,55 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    origin: "maia-019f1dd3-1ac9-782a-8363-c1033016c155"
+    description: "Incremental extract of MP3 audio files from Snowflake stage into EXTRACT.AUDIO_FILES"
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+          - "Load Audio Files"
+      parameters:
+        componentName: "Start"
+    Load Audio Files:
+      type: "sql-executor"
+      parameters:
+        componentName: "Load Audio Files"
+        scriptLocation: "Component"
+        sqlScript: |
+          INSERT INTO "CALL_CENTER_ANALYTICS_DW"."EXTRACT"."AUDIO_FILES" (
+              CALL_TRANSCRIPT_ID,
+              FILE_PATH,
+              AUDIO_FILE,
+              AUDIO_FILE_URL,
+              FILE_SIZE,
+              LAST_MODIFIED,
+              FILE_EXTENSION
+          )
+          SELECT 
+              REPLACE(RELATIVE_PATH, '.mp3', '') AS CALL_TRANSCRIPT_ID,
+              RELATIVE_PATH AS FILE_PATH,
+              TO_FILE('@CALL_CENTER_ANALYTICS_DW.EXTRACT.INT_STAGE_DOC', RELATIVE_PATH) AS AUDIO_FILE,
+              BUILD_STAGE_FILE_URL('@CALL_CENTER_ANALYTICS_DW.EXTRACT.INT_STAGE_DOC', RELATIVE_PATH) AS AUDIO_FILE_URL,
+              SIZE AS FILE_SIZE,
+              LAST_MODIFIED,
+              SPLIT_PART(RELATIVE_PATH, '.', -1) AS FILE_EXTENSION
+          FROM 
+              DIRECTORY('@CALL_CENTER_ANALYTICS_DW.EXTRACT.INT_STAGE_DOC')
+          WHERE 
+              RELATIVE_PATH ILIKE '%.mp3'
+              AND REPLACE(RELATIVE_PATH, '.mp3', '') NOT IN (
+                  SELECT CALL_TRANSCRIPT_ID 
+                  FROM "CALL_CENTER_ANALYTICS_DW"."EXTRACT"."AUDIO_FILES"
+              );
+design:
+  components:
+    Start:
+      position:
+        x: 0
+        y: 0
+    Load Audio Files:
+      position:
+        x: 160
+        y: 0
