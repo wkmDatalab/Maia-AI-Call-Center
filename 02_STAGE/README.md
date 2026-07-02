@@ -1,7 +1,40 @@
 # STAGE - Data Transformation and Staging
-
 ## Purpose
 This folder contains transformation pipelines (.tran.yaml) that clean, transform, and prepare data within the data warehouse.
+
+## Implementation 
+We have two transformation pipelines [STAGE_AUDIO_TRANSCRIPT](STAGE_AUDIO_TRANSCRIPT.tran.yaml) & [STAGE_AUDIO_TRANSCRIPT_ANALYSIS](STAGE_AUDIO_TRANSCRIPT_ANALYSIS.tran.yaml). 
+```mermaid
+flowchart LR 
+
+
+subgraph STAGE["STAGE_AUDIO_TRANSCRIPT"]
+direction TB
+A[Table Input: 
+EXTRACT.AUDIO_FILES]-->B[Filter: 
+Filter New Records using STAGE.AUDIO_TRANSCRIPT]-->C[Calculator: 
+Transcribe Audio with AI_TRANSCRIBE]
+C-->D[Table Output: 
+STAGE.AUDIO_TRANSCRIPT]
+end
+
+subgraph ANALYSIS["STAGE_AUDIO_TRANSCRIPT_ANALYSIS"]
+direction TB
+E[Table Input:
+STAGE.AUDIO_TRANSCRIPT]-->F["Filter: 
+Filter Existing records using STAGE.AUDIO_TRANSCRIPT_ANALYSIS"]
+F-->G[Cortex Answer Extract: 
+] -->H[Cortex Summarise:
+]-->I[Cortex Sentiment:
+]-->J[Cortex Multi-prompt: 
+]-->K[Calculator: 
+Data Extraction]-->L[Rename:
+Standardize cortex generated column names]-->M[Table Output: 
+STAGE.AUDIO_TRANSCRIPT_ANALYSIS]
+end
+
+Z[EXTRACT.AUDIO_FILES]-->STAGE--STAGE.AUDIO_TRANSCRIPT-->ANALYSIS
+```
 
 ## Contents
 - Data cleansing and validation pipelines
