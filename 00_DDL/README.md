@@ -1,7 +1,11 @@
 # 00_DDL: Create Tables
 
-The file [BUILD_SCHEMA_DW.orch.yaml](BUILD_SCHEMA_DW.orch.yaml) corresponds to an Orchestration pipeline, as shown in the image below. The role of this pipeline is to re-create all the tables in snowflake to allow the user to begin developing from an empty envrioment.
-![alt text](image.png)
+## Overview
+The orchestration pipeline in [BUILD_SCHEMA_DW.orch.yaml](BUILD_SCHEMA_DW.orch.yaml) recreates the core Snowflake schema from a clean starting point, making it easy to reset and redeploy your environment.
+
+<p align="center">
+  <img src="image.png" alt="Build schema orchestration pipeline" width="760" />
+</p>
 
 ### Redeploy - Delete Existing Objects
 The white segment, executes drop commands to clear all exisiting Tables in the three schemas.

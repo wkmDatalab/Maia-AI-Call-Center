@@ -4,9 +4,14 @@
 This folder contains pipelines that load transformed data into final analytics tables, data marts, and reporting structures.
 
 ## Implementation
-In this phase we create a bunch of transformation pipelines, which we call `Children Packages`, which are orchestrated by a `Parent Package` which is an orchestration pipeline.
+In this phase, we assemble a set of transformation pipelines into a cohesive loading workflow, orchestrated by a parent package that coordinates the full analytics refresh.
 
-Our Parent package is illustrated here: [PARENT_LOAD_WH](PARENT_LOAD_DWH.orch.yaml).
+Our parent package is illustrated here: [PARENT_LOAD_DWH.orch.yaml](PARENT_LOAD_DWH.orch.yaml).
+
+<p align="center">
+  <img src="image.png" alt="Parent load orchestration overview" width="760" />
+</p>
+
 ```mermaid 
 flowchart LR
 
@@ -44,7 +49,6 @@ flowchart LR
     %% Wait node leads to Fact loading
     WAITFD --> LOAD_FACT
 ```
-![alt text](image.png)
 
 The [LOAD_FCT_CALL_TRANSCRIPT](LOAD_FCT_CALL_TRANSCRIPT.tran.yaml) transfrmation pipeline ingests all of the dimension tables (`DWH.DIM_XXXX`) and the data from the  to create a Fact table.
 
@@ -80,8 +84,16 @@ graph LR
     FILTER --> INSERT_FCT
 ```
 
-lastly are the various `LOAD_DIM_XXXX` transfromation pipeline
-![alt text](LOAD_DIM_AGENT.png) ![alt text](LOAD_DIM_CALL_PRIORITY.png) ![alt text](LOAD_DIM_CALL_SENTIMENT.png) ![alt text](LOAD_DIM_CALL_STATUS.png) ![alt text](LOAD_DIM_CALL_TYPE.png)
+Finally, the individual `LOAD_DIM_XXXX` transformation pipelines are shown below for quick visual reference:
+
+<div align="center">
+  <img src="LOAD_DIM_AGENT.png" alt="Load DIM Agent pipeline" width="220" />
+  <img src="LOAD_DIM_CALL_PRIORITY.png" alt="Load DIM Call Priority pipeline" width="220" />
+  <img src="LOAD_DIM_CALL_SENTIMENT.png" alt="Load DIM Call Sentiment pipeline" width="220" />
+  <img src="LOAD_DIM_CALL_STATUS.png" alt="Load DIM Call Status pipeline" width="220" />
+  <img src="LOAD_DIM_CALL_TYPE.png" alt="Load DIM Call Type pipeline" width="220" />
+</div>
+
 ```mermaid
 flowchart LR
 
