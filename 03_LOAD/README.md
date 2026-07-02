@@ -50,10 +50,6 @@ flowchart LR
     WAITFD --> LOAD_FACT
 ```
 
-<p align="center">
-  <img src="image.png" alt="Parent package diagram" />
-</p>
-
 The [LOAD_FCT_CALL_TRANSCRIPT](LOAD_FCT_CALL_TRANSCRIPT.tran.yaml) transfrmation pipeline ingests all of the dimension tables (`DWH.DIM_XXXX`) and the data from the  to create a Fact table.
 
 
