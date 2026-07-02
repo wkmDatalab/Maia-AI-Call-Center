@@ -1,0 +1,6 @@
+#Exclude all the assets
+/assets/*
+/.matillion/*
+scripts/*
+Matillion.zip
+/Snowflake-equivalent-scripts/*
